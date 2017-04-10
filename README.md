@@ -29,7 +29,7 @@ My code makes use of 2 text-based control files:
 1. ~/.todoistprodrc: Lives in my home directory and contains my login information for the Todoist API (rights set to 700).
 2. ~/.projects.txt: A comma-separated file used to store charge number information for the projects I work on. The projects in this file must have identical names to the projects in Todoist. A typical example looks like this:
 
-`# Project | Charge number valid dates | Charge Number | Budget | Active`
+`# Project | Charge number valid dates | Charge Number | Budget | Active`\s\s
 `CAP R1|2016-02-01,2016-09-30,XXX16-YYYY;2016-10-01,2017-09-30,XXX17-YYYY|5000|1`
 
 # Adding an item to my Todoist list
