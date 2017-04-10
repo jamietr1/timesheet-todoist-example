@@ -18,7 +18,7 @@ Within each of the four subprojects are the projects that I actually work on. So
 
 I have color-coded the four category projects so that I can easily see how much of each category I work on in the Todoist productivity screen. (Green is Projects, Yellow is support, etc.) It looks something like this:
 
-![Todoist Project Colors]()
+![Todoist Project Colors](https://github.com/jamietr1/timesheet-todoist-example/blob/master/images/Todoist-Project-Colors.png)
 
 The code is written to be aware of this structure.
 
@@ -29,20 +29,20 @@ My code makes use of 2 text-based control files:
 1. ~/.todoistprodrc: Lives in my home directory and contains my login information for the Todoist API (rights set to 700).
 2. ~/.projects.txt: A comma-separated file used to store charge number information for the projects I work on. The projects in this file must have identical names to the projects in Todoist. A typical example looks like this:
 
-`# Project | Charge number valid dates | Charge Number | Budget | Active
-`CAP R1|2016-02-01,2016-09-30,XXX16-YYYY;2016-10-01,2017-09-30,XXX17-YYYY|5000|1
+`# Project | Charge number valid dates | Charge Number | Budget | Active`
+`CAP R1|2016-02-01,2016-09-30,XXX16-YYYY;2016-10-01,2017-09-30,XXX17-YYYY|5000|1`
 
 # Adding an item to my Todoist list
 
 When I add something project-related to Todoist, I am always sure to assign it to the correct project. When I complete the task, I append the time I spent on the task to the end of the task prior to completing it. A typical completed task might look like this:
 
-![Time Spent]()
+![Time Spent](https://github.com/jamietr1/timesheet-todoist-example/blob/master/images/Todoist-Time-Spent.png)
 
 # Displaying my work for any given day
 
 At the command line, I run my "timesheet" command. Without any parameters, it assumes the current date. If I say "timesheet yesterday" it will pull data for yesterday. "timesheet Wednesday" will pull data from the previous Wednesday. I can also run "timesheet yyyy-mm-dd" to get data for a specific date. I've created an alias "ts" for my "timesheet" command to save keystrokes. The result looks something like this:
 
-![Timesheet results]()
+![Timesheet results](https://github.com/jamietr1/timesheet-todoist-example/blob/master/images/todoist-results.png)
 
 If I have included the time spent for tasks, the total time will be automatically subtotaled for me in the output.
 
