@@ -1,0 +1,124 @@
+#!/usr/bin/env python
+
+import todoist
+import mytime
+import timesheet_todoist as ts
+import datetime
+import sys
+import re
+import argparse
+import parsedatetime as pdt
+from os.path import expanduser
+import os
+
+# Parse command line and figure out what date we're looking for
+parser = argparse.ArgumentParser(description='Display timesheet information based on done.txt.')
+parser.add_argument('sheetdate', metavar='N', nargs='*', help='The date for which to display timesheet information.')
+parser.add_argument('-t', '--time', help='Show time spent estimate for each task.', action="store_true")
+parser.add_argument('-l', '--links', help='Show hyperlinks in tasks', action="store_true")
+
+p = pdt.Calendar()
+args = parser.parse_args()
+if (not args.sheetdate):
+    args.sheetdate.extend(['today'])
+
+# first, check to see what's been provided for sheetdate
+tday = datetime.date.today().strftime('%Y-%m-%d')
+yday = datetime.datetime.strptime(tday, '%Y-%m-%d')
+twday = datetime.datetime.strptime(tday, '%Y-%m-%d').weekday()
+
+if args.sheetdate[0] == "today":
+    sheetdate = datetime.date.today().strftime('%Y-%m-%d')
+elif args.sheetdate[0] == "yesterday":
+    sheetdate = yday + datetime.timedelta(days=-1)
+    sheetdate = sheetdate.strftime('%Y-%m-%d')
+elif args.sheetdate[0] == "monday" or args.sheetdate[0] == "tuesday" or args.sheetdate[0] == "wednesday" or args.sheetdate[0] == "thursday" or args.sheetdate[0] == "friday" or args.sheetdate[0] == "saturday" or args.sheetdate[0] == "sunday":
+    time_struct, parse_status = p.parse("last " + args.sheetdate[0])
+    dt = datetime.datetime( *time_struct[:6])
+    sheetdate =  dt.strftime('%Y-%m-%d')
+else:
+    dt = datetime.datetime.strptime(args.sheetdate[0], '%Y-%m-%d')
+    sheetdate =  dt.strftime('%Y-%m-%d')
+
+
+# 1. Read run control file
+PROJ_FILE = ts.read_rc_value("", "PROJECT_FILE_NEW")
+pwd = ts.read_rc_value("", "TODOIST_PWD")
+username = ts.read_rc_value("", "TODOIST_USER")
+
+# 2. Sign into Todoist
+api = todoist.TodoistAPI()
+user = api.user.login(username, pwd)
+
+# 3. Set the user timezone offset
+tz_offset = user['tz_info']['hours']
+# TODO: make this so that it isn't hardcoded
+since = sheetdate + 'T05:00'
+until = (datetime.datetime.strptime(sheetdate, '%Y-%m-%d') + datetime.timedelta(days=1)).strftime('%Y-%m-%d') + 'T05:00'
+
+# 4. Sync with the Todoist API
+api.sync()
+
+# 5. Grab today's completed items
+response = api.activity.get(object_type='item', event_type='completed', since=since, until=until)
+
+if len(response) == 0:
+    print("No items for " + sheetdate)
+    sys.exit(0)
+
+# 6. Get parent project IDs for core projects
+activity_projects = set()
+for item in response:
+    item_project = api.projects.get_by_id(item['parent_project_id'])
+    if item_project['parent_id'] is not None:
+        # check the project parent to see if it one of the five we care about
+        item_project_parent = api.projects.get_by_id(item_project['parent_id'])
+        if (item_project_parent['name'] == "Work") or (item_project_parent['name'] == "Projects") or (item_project_parent['name'] == "Support") or (item_project_parent['name'] == "Training") or (item_project_parent['name'] == "Management"):
+            activity_projects.add(item_project['id'])
+
+# 7. Loop through the results
+if len(activity_projects) > 0:
+    print("Results for " + sheetdate)
+    for project in activity_projects:
+        # Get the project name
+        p = api.projects.get_by_id(project)
+        project_name = p['name']
+        counter = total_time_min = 0
+        ptn = ts.get_ptn_by_date(PROJ_FILE, sheetdate, project_name)
+        header = ptn + ": " + project_name
+
+        # Get the completed items for this project
+        item_list = set()
+        for item in response:
+            if item['parent_project_id'] == project:
+                subject = item['extra_data']['content']
+                m = re.match(r'^.*\/\/(\d+).*$', subject)
+                if m:
+                    total_time_min = total_time_min + int(m.group(1))
+                    replace_string = " //" + m.group(1)
+                    if args.time:
+                        subject = subject.replace(replace_string, " | [" + m.group(1) + " min]")
+                    else:
+                        # suppress showing the time spent on line items
+                        subject = subject.replace(replace_string, "")
+
+                if not args.links:
+                    # suppress links on line items
+                    subject = re.sub(r'\(https??:\/\/.*\)', '', subject, re.IGNORECASE)
+                item_list.add('* ' + subject)
+                counter = counter + 1
+
+        if len(item_list) > 0:
+            hours = str(round(total_time_min/60.0, 2))
+            header = ptn + ': ' + project_name + ' (Total time: ' + hours + ')'
+            print("")
+            print(header)
+            print "=" * len(header)
+
+        for item in set(item_list):
+            print(item)
+
+    print("")
+
+else:
+    print("No items for " + sheetdate)
